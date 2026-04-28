@@ -8,7 +8,6 @@ from data.wfdb_dataset import WFDBDataset
 import os
 from tqdm import tqdm
 from torch.nn.utils.rnn import pad_sequence
-from sklearn.metrics import f1_score, roc_auc_score, average_precision_score
 import numpy as np
 import mlflow
 import mlflow.pytorch
@@ -79,6 +78,7 @@ def train():
         shuffle=True,
         num_workers=4,
         collate_fn=pad_collate,
+        persistent_workers=True,
     )
     val_loader = torch.utils.data.DataLoader(
         val_dataset,
@@ -86,6 +86,7 @@ def train():
         shuffle=False,
         num_workers=4,
         collate_fn=pad_collate,
+        persistent_workers=True,
     )
 
     # 3. Initialize Model
@@ -237,6 +238,8 @@ def train():
 
         # 5. Threshold Calibration
         print("\n--- Performing Threshold Calibration on Best Model ---")
+        from sklearn.metrics import f1_score, roc_auc_score, average_precision_score
+        
         model.load_state_dict(torch.load(best_model_path, map_location=device))
         model.eval()
 
@@ -308,8 +311,11 @@ def train():
 
         mlflow.pytorch.log_model(
             pytorch_model=model,
-            artifact_path="ekg_crnn_model",
+            name="ekg_crnn_model",
             signature=signature,
+            input_example=sample_input,
+            serialization_format="pt2",
+            pip_requirements="requirements.txt",
             registered_model_name="EKG_CRNN_Classifier",
         )
         print("Model successfully logged to MLflow with signature!")
