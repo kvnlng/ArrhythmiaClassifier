@@ -1,0 +1,9 @@
+torch
+torchvision
+matplotlib
+wfdb
+tqdm
+scikit-learn
+pandas
+mlflow
+ruff==0.15.12
