@@ -12,6 +12,13 @@ import numpy as np
 import mlflow
 import mlflow.pytorch
 from mlflow.models.signature import infer_signature
+import warnings
+
+# Suppress annoying sklearn warnings during threshold calibration for rare diseases
+warnings.filterwarnings("ignore", message="No positive class found in y_true", category=UserWarning)
+# Suppress harmless PyTorch export warnings for LSTMs when saving in pt2 format
+warnings.filterwarnings("ignore", message=".*were assigned during export.*", category=UserWarning)
+warnings.filterwarnings("ignore", message=".*given buffer is not writable.*", category=UserWarning)
 
 
 def pad_collate(batch):
@@ -79,6 +86,7 @@ def train():
         num_workers=4,
         collate_fn=pad_collate,
         persistent_workers=True,
+        pin_memory=True,
     )
     val_loader = torch.utils.data.DataLoader(
         val_dataset,
@@ -87,6 +95,7 @@ def train():
         num_workers=4,
         collate_fn=pad_collate,
         persistent_workers=True,
+        pin_memory=True,
     )
 
     # 3. Initialize Model

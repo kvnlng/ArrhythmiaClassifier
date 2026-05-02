@@ -25,6 +25,11 @@ import mlflow
 import mlflow.pytorch
 from pyspark.sql import SparkSession
 from torch.utils.data import Dataset, DataLoader
+import warnings
+
+# Suppress harmless PyTorch export warnings for LSTMs when saving in pt2 format
+warnings.filterwarnings("ignore", message=".*were assigned during export.*", category=UserWarning)
+warnings.filterwarnings("ignore", message=".*given buffer is not writable.*", category=UserWarning)
 
 # Ensure the repo root is in the path to import custom modules
 sys.path.append(os.path.abspath('.'))
@@ -49,20 +54,18 @@ class DeltaEKGDataset(Dataset):
         - 'waveform_array': A list of lists or 2D numpy array of shape (12, 15000)
         - 'labels': A list or 1D numpy array of shape (55,) indicating the multi-hot SNOMED-CT codes
         """
-        self.waveforms = pdf["waveform_array"].values
-        self.labels = pdf["labels"].values
+        # Convert the entire column into a contiguous PyTorch tensor upfront.
+        # This completely eliminates CPU processing during the training loop.
+        self.waveforms = torch.tensor(np.stack(pdf["waveform_array"].values), dtype=torch.float32)
+        self.labels = torch.tensor(np.stack(pdf["labels"].values), dtype=torch.float32)
         self.num_classes = num_classes
 
     def __len__(self):
         return len(self.waveforms)
 
     def __getitem__(self, idx):
-        # Convert the array to float32 tensors
-        # Shape should be (12, 15000) for 12-lead EKG at 250Hz for 60 seconds
-        x = np.array(self.waveforms[idx], dtype=np.float32)
-        y = np.array(self.labels[idx], dtype=np.float32)
-
-        return torch.tensor(x), torch.tensor(y)
+        # Memory slicing is instantaneous compared to np.array() conversion
+        return self.waveforms[idx], self.labels[idx]
 
 # COMMAND ----------
 # MAGIC %md
@@ -83,8 +86,16 @@ pdf = df.toPandas()
 print(f"Loaded {len(pdf)} 60-second EKG clips into memory.")
 
 # Initialize PyTorch Dataset and DataLoader
+# Use num_workers > 0 to load data on parallel CPU threads, 
+# and pin_memory=True to drastically speed up CPU-to-GPU data transfers
 dataset = DeltaEKGDataset(pdf, num_classes=55)
-dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+dataloader = DataLoader(
+    dataset, 
+    batch_size=32, 
+    shuffle=True, 
+    num_workers=4, 
+    pin_memory=True
+)
 
 # COMMAND ----------
 # MAGIC %md
