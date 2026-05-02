@@ -14,7 +14,7 @@ The ArrhythmiaClassifier is a clinical-grade EKG Multi-Label classification syst
 
 The core model architecture is a Convolutional Recurrent Neural Network (CRNN) that combines a 1D ResNet for spatial feature extraction with a Bidirectional LSTM for temporal sequence modeling, capped with a self-attention mechanism for temporal pooling.
 
-```mermaid
+<div class="mermaid">
 flowchart TD
     Input["Raw 12-Lead EKG (Batch, 12, SeqLen)"] --> Stem
     
@@ -36,7 +36,7 @@ flowchart TD
     Context --> Dropout["Dropout (p=0.5)"]
     Dropout --> FC["Fully Connected Head"]
     FC --> Output["Logits (Multi-Label)"]
-```
+</div>
 
 ### 1. Convolutional Stem
 Because clinical EKG data is sampled at high frequencies (e.g., 500Hz), the raw signal length is very large. We use an initial 1D convolutional stem with a large kernel size (`kernel_size=15`) and a high stride (`stride=3`) combined with Max Pooling to aggressively downsample the spatial sequence dimension while extracting initial low-level waveform features.
@@ -65,10 +65,15 @@ The model lifecycle is entirely managed via MLflow and Databricks.
 * **Databricks Prediction Notebook**: `databricks_predict.py` operates directly against Unity Catalog Delta tables. It pulls the production-tagged model from the MLflow Model Registry and processes data in parallel using PySpark UDFs for scalable inference.
 * **Fine-Tuning Workflow**: Retraining and transferring knowledge is handled in the `finetune_databricks.py` notebook. This notebook isolates the classification head and freezes the feature extraction layers, making it ideal for adapting to new, local hospital datasets stored within a Databricks environment.
 
-```mermaid
+<div class="mermaid">
 flowchart LR
     Dataset["Unity Catalog Delta Tables"] --> Train["train.py / finetune_databricks.py"]
     Train -- Logs Metrics & Model --> MLflow["MLflow Tracking & Registry"]
     MLflow -- Serves 'pt2' Model --> Predict["databricks_predict.py (Batch Inference)"]
     Predict --> Output["Inference Results Delta Table"]
-```
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true });
+</script>
