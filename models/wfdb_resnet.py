@@ -88,14 +88,14 @@ class WFDBResNet(nn.Module):
     A 1D ResNet Architecture for real PhysioNet WFDB EKG Classification.
     """
 
-    def __init__(self, num_classes: int = 55):
+    def __init__(self, in_channels: int = 12, num_classes: int = 55):
         super(WFDBResNet, self).__init__()
 
-        # 1. Initial Stem (Process the raw 12-lead signal)
+        # 1. Initial Stem (Process the raw signal)
         # 500Hz data means high frequency. We use a large kernel and stride to downsample initially.
         self.stem = nn.Sequential(
             nn.Conv1d(
-                in_channels=12,
+                in_channels=in_channels,
                 out_channels=32,
                 kernel_size=15,
                 stride=3,
@@ -159,13 +159,13 @@ class WFDBResNetLSTM(nn.Module):
     Uses ResNet for feature extraction and an LSTM for sequence modeling.
     """
 
-    def __init__(self, num_classes: int = 55):
+    def __init__(self, in_channels: int = 12, num_classes: int = 55):
         super(WFDBResNetLSTM, self).__init__()
 
         # 1. Initial Stem
         self.stem = nn.Sequential(
             nn.Conv1d(
-                in_channels=12,
+                in_channels=in_channels,
                 out_channels=32,
                 kernel_size=15,
                 stride=3,
