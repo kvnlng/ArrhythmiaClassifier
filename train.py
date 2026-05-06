@@ -57,7 +57,7 @@ def train():
     print(f"Using device: {device}")
 
     # 2. Setup Real DataLoaders
-    base_dir = os.path.join(os.path.dirname(__file__), "data", "wfdb")
+    base_dir = os.path.join("/","Volumes", "source_sys", "raw_sickbay", "converted", "longke", "wfdb")
 
     # Use is_train=True for training to enable Data Augmentation!
     full_dataset_train = WFDBDataset(base_dir, is_train=True)
@@ -81,18 +81,18 @@ def train():
     # We must pass collate_fn=pad_collate because we now have variable length tensors!
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
-        batch_size=128,
+        batch_size=2,
         shuffle=True,
-        num_workers=4,
+        num_workers=24,
         collate_fn=pad_collate,
         persistent_workers=True,
         pin_memory=True,
     )
     val_loader = torch.utils.data.DataLoader(
         val_dataset,
-        batch_size=128,
+        batch_size=2,
         shuffle=False,
-        num_workers=4,
+        num_workers=24,
         collate_fn=pad_collate,
         persistent_workers=True,
         pin_memory=True,
@@ -119,9 +119,7 @@ def train():
 
     # 4. Training Loop
     best_val_loss = float("inf")
-    best_model_path = os.path.join(
-        os.path.dirname(__file__), "best_wfdb_resnet_lstm.pth"
-    )
+    best_model_path = os.path.join("best_wfdb_resnet_lstm.pth")
 
     # Start MLflow run for Databricks tracking
     mlflow.set_experiment("/Shared/ekg_classifier")
@@ -248,7 +246,7 @@ def train():
         # 5. Threshold Calibration
         print("\n--- Performing Threshold Calibration on Best Model ---")
         from sklearn.metrics import f1_score, roc_auc_score, average_precision_score
-        
+
         model.load_state_dict(torch.load(best_model_path, map_location=device))
         model.eval()
 
@@ -302,7 +300,7 @@ def train():
         mlflow.log_metric("best_macro_f1", best_f1)
 
         # Save the optimal threshold to a text file for predict.py to use
-        thresh_path = os.path.join(os.path.dirname(__file__), "optimal_threshold.txt")
+        thresh_path = os.path.join("optimal_threshold.txt")
         with open(thresh_path, "w") as f:
             f.write(str(best_threshold))
         print(f"Optimal threshold saved to {thresh_path}")
